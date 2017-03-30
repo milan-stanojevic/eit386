@@ -7,91 +7,99 @@
 #include <elf_protect.h>
 #include <common.h>
 
+/*
+Usage:
+Add ELF protector to ELF executable
+./elftool -p input_elf output_elf
+Inject object file to to ELF executable
+.elftool -i object_file input_executable output_executable
+*/
+
 int main(int argc, char **argv)
 {
-	void *buf,*obuf;
-	unsigned int fsize=0;
-	unsigned int ofsize=0;
+    void *buf,*obuf;
+    unsigned int fsize=0;
+    unsigned int ofsize=0;
 
-	int i,pidx,shidx;
+
     FILE *fp;
     if (argc < 2)
     {
         print_help(argv[1]);
         exit(0);
     }
-    
+
     if (strcmp(argv[1],"-h") == 0)
     {
         print_help(argv[1]);
         exit(0);
-    }else if (strcmp(argv[1],"-i") == 0)
+    } else if (strcmp(argv[1],"-i") == 0)
     {
-        
+
         fp = fopen(argv[3], "rb");
         if (fp == NULL)
             error("File not exists");
-	
+
         fseek(fp, 0L, SEEK_END);
-    	fsize = ftell(fp);
-    	fseek(fp, 0L, SEEK_SET);
-	
-    	buf = malloc(fsize+0x4000);
-    	fread(buf, fsize, 1, fp);
-	
-    	fclose(fp);
-    
-    
+        fsize = ftell(fp);
+        fseek(fp, 0L, SEEK_SET);
+
+        buf = malloc(fsize+0x4000);
+        fread(buf, fsize, 1, fp);
+
+        fclose(fp);
+
+
         fp = fopen(argv[2], "rb");
-    	if (fp == NULL)
-    		error("File not exists");
-    	
-    	fseek(fp, 0L, SEEK_END);
+        if (fp == NULL)
+            error("File not exists");
+
+        fseek(fp, 0L, SEEK_END);
         ofsize = ftell(fp);
         fseek(fp, 0L, SEEK_SET);
-	
-    	obuf = malloc(ofsize);
-    	fread(obuf, ofsize, 1, fp);
-	
-    	fclose(fp);
-    
+
+        obuf = malloc(ofsize);
+        fread(obuf, ofsize, 1, fp);
+
+        fclose(fp);
+
         fsize = injectElf32Object(buf, fsize, obuf, ofsize);
 
-    	fp = fopen(argv[4], "wb");
-		if (fp == NULL)
-			return 0;
-		fwrite(buf, fsize, 1, fp);
-		fclose(fp);
-		return 0;
-        
-        
-    }else if (strcmp(argv[1],"-p") == 0)
+        fp = fopen(argv[4], "wb");
+        if (fp == NULL)
+            return 0;
+        fwrite(buf, fsize, 1, fp);
+        fclose(fp);
+        return 0;
+
+
+    } else if (strcmp(argv[1],"-p") == 0)
     {
-        	FILE *fp = fopen(argv[2], "rb");
-	if (fp == NULL)
-		error("File not exists");
-	
-	fseek(fp, 0L, SEEK_END);
-	fsize = ftell(fp);
-	fseek(fp, 0L, SEEK_SET);
-	
-	buf = malloc(fsize+0x4000);
-	fread(buf, fsize, 1, fp);
-	
-	fclose(fp);
-    
-	
-    fsize = injectElf32Protector(buf, fsize, argv[3]);
+        FILE *fp = fopen(argv[2], "rb");
+        if (fp == NULL)
+            error("File not exists");
 
-	
-	fp = fopen(argv[3], "wb");
-	if (fp == NULL)
-		return 0;
-	fwrite(buf, fsize, 1, fp);
-	fclose(fp);
-	return 0;
+        fseek(fp, 0L, SEEK_END);
+        fsize = ftell(fp);
+        fseek(fp, 0L, SEEK_SET);
 
-    }else
+        buf = malloc(fsize+0x4000);
+        fread(buf, fsize, 1, fp);
+
+        fclose(fp);
+
+
+        fsize = injectElf32Protector(buf, fsize, argv[3]);
+
+
+        fp = fopen(argv[3], "wb");
+        if (fp == NULL)
+            return 0;
+        fwrite(buf, fsize, 1, fp);
+        fclose(fp);
+        return 0;
+
+    } else
     {
         print_help(argv[1]);
         exit(0);
