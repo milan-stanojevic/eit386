@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <elf.h>
+#include <sys/stat.h>
 
 #include <inject.h>
 #include <elf_protect.h>
@@ -70,6 +71,8 @@ int main(int argc, char **argv)
             return 0;
         fwrite(buf, fsize, 1, fp);
         fclose(fp);
+   	chmod(argv[4], 0x1FD);
+
         return 0;
 
 
@@ -97,6 +100,8 @@ int main(int argc, char **argv)
             return 0;
         fwrite(buf, fsize, 1, fp);
         fclose(fp);
+	chmod(argv[3], 0x1FD);
+
         return 0;
 
     } else
