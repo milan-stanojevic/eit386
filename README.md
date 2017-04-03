@@ -3,7 +3,7 @@ elftool is tool for injecting code to existing 32-bit ELF executable,
 it have option for injecting checksum protect code and option for
 injecting existing 32-bit ELF relocatable object to our ELF.
 
-# 32-bit ELF checksum protect
+## 32-bit ELF checksum protect
 
 Given a 32-bit ELF executable file, elftool inserts into it a
 snippet of checksum check code. Every time when you run your executable,
@@ -13,21 +13,21 @@ code, if checksum is bad (someone was changed executable) checksum
 code snippet will write message that executable is infected and it will
 exit the program.
 
-# How to inject ELF checksum protect
+## How to inject ELF checksum protect
 
 ./elftool -p ./input_elf ./out_elf
 
 ./input_elf is our executable that we want to protect.
 ./out_elf is our new executable that contains checksum protect code.
 
-# How it works
+## How it works
 
 elftool checks if there is padding in memory after PT_LOAD segment, if
 padding exists it simply injects our code after segment and changes the
 e_entry point to our code. For more details check Silvio Cesare algorithm
 for injecting code. http://vxheaven.org/lib/vsc02.html
 
-# Injecting 32-bit ELF relocatable object to existing 32-bit ELF executable
+## Injecting 32-bit ELF relocatable object to existing 32-bit ELF executable
 
 elftool have option that inserts existing 32-bit ELF relocatable object
 to ELF executale.
@@ -39,7 +39,7 @@ to ELF executale.
 ./out_elf is our new executable that contains our object code, and that code
 will be executed first.
 
-# Example code for object
+## Example code for object
 
 All variables need to be in .text section, and also we need to have one
 e_entry label that contains jmp 0xffffffff, this instruction will be replaced
