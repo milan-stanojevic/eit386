@@ -15,7 +15,7 @@ exit the program.
 
 ## How to inject ELF checksum protect
 
-./elftool -p ./input_elf ./out_elf
+**./elftool -p ./input_elf ./out_elf**
 
 ./input_elf is our executable that we want to protect.
 
@@ -33,7 +33,7 @@ for injecting code. http://vxheaven.org/lib/vsc02.html
 elftool have option that inserts existing 32-bit ELF relocatable object
 to ELF executale.
 
-.elftool -i ./object ./input_elf ./out_elf
+**.elftool -i ./object ./input_elf ./out_elf**
 
 ./object is our 32-bit ELF relocatable object
 
