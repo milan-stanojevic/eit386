@@ -18,6 +18,7 @@ exit the program.
 ./elftool -p ./input_elf ./out_elf
 
 ./input_elf is our executable that we want to protect.
+
 ./out_elf is our new executable that contains checksum protect code.
 
 ## How it works
@@ -35,7 +36,9 @@ to ELF executale.
 .elftool -i ./object ./input_elf ./out_elf
 
 ./object is our 32-bit ELF relocatable object
+
 ./input_elf is our executable that we want to insert relocatable object to it.
+
 ./out_elf is our new executable that contains our object code, and that code
 will be executed first.
 
