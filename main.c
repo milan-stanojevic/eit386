@@ -5,15 +5,14 @@
 #include <sys/stat.h>
 
 #include <inject.h>
-#include <elf_protect.h>
 #include <common.h>
 
 /*
 Usage:
 Add ELF protector to ELF executable
-./elftool -p input_elf output_elf
+./eit386 -p input_elf output_elf
 Inject object file to to ELF executable
-.elftool -i object_file input_executable output_executable
+.eit386 -i object_file input_executable output_executable
 */
 
 int main(int argc, char **argv)
@@ -26,15 +25,15 @@ int main(int argc, char **argv)
     FILE *fp;
     if (argc < 2)
     {
-        print_help(argv[1]);
+        print_help(argv[0]);
         exit(0);
     }
 
     if (strcmp(argv[1],"-h") == 0)
     {
-        print_help(argv[1]);
+        print_help(argv[0]);
         exit(0);
-    } else if (strcmp(argv[1],"-i") == 0)
+    } else if (strcmp(argv[1],"-i") == 0 && argc == 5)
     {
 
         fp = fopen(argv[3], "rb");
@@ -68,7 +67,7 @@ int main(int argc, char **argv)
 
         fp = fopen(argv[4], "wb");
         if (fp == NULL)
-            return 0;
+            error("Can not create output file");
         fwrite(buf, fsize, 1, fp);
         fclose(fp);
    	chmod(argv[4], 0x1FD);
@@ -76,7 +75,7 @@ int main(int argc, char **argv)
         return 0;
 
 
-    } else if (strcmp(argv[1],"-p") == 0)
+    } else if (strcmp(argv[1],"-p") == 0 && argc == 4)
     {
         FILE *fp = fopen(argv[2], "rb");
         if (fp == NULL)
@@ -91,13 +90,35 @@ int main(int argc, char **argv)
 
         fclose(fp);
 
+		char cmd[128];
+		char object_fname[128];
+		sprintf(object_fname, "%s_object.S",argv[2]);
+		sprintf(cmd, "cp object.S %s", object_fname);
+		system(cmd);
+		sprintf(cmd,"sed -i -e 's/TEMPLATE_FNAME/%s/g' %s;", argv[3], object_fname);
+		system(cmd);
+		sprintf(cmd,"gcc -m32 -c %s",object_fname);
+		system(cmd);
+		sprintf(object_fname,"%s_object.o",argv[2]);
+		fp = fopen(object_fname, "rb");
+        if (fp == NULL)
+            error("File not exists");
 
-        fsize = injectElf32Protector(buf, fsize, argv[3]);
+        fseek(fp, 0L, SEEK_END);
+        ofsize = ftell(fp);
+        fseek(fp, 0L, SEEK_SET);
 
+        obuf = malloc(ofsize);
+        fread(obuf, ofsize, 1, fp);
+
+        fclose(fp);
+		
+        fsize = injectElf32ProtectionObject(buf, fsize, obuf, ofsize);
+		
 
         fp = fopen(argv[3], "wb");
         if (fp == NULL)
-            return 0;
+            error("Can not create output file");
         fwrite(buf, fsize, 1, fp);
         fclose(fp);
 	chmod(argv[3], 0x1FD);
@@ -106,7 +127,7 @@ int main(int argc, char **argv)
 
     } else
     {
-        print_help(argv[1]);
+        print_help(argv[0]);
         exit(0);
     }
 }

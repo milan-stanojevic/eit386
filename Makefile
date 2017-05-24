@@ -1,12 +1,12 @@
 CC=gcc
 CFLAGS= -m32 -I.
-DEPS = common.h inject.h elf_protect.h
-OBJ = main.o inject.o elf_protect.o
+DEPS = common.h inject.h
+OBJ = main.o inject.o
 
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-elftool: $(OBJ)
+eit386: $(OBJ)
 	gcc -o $@ $^ $(CFLAGS)
 
 

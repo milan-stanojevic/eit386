@@ -1,5 +1,5 @@
-# elftool
-elftool is tool for injecting code to existing 32-bit ELF executable, 
+# eit386
+eit386 is tool for injecting code to existing 32-bit ELF executable, 
 it have option for injecting checksum protect code and option for
 injecting existing 32-bit ELF relocatable object to our ELF.
 
@@ -15,7 +15,7 @@ exit the program.
 
 ## How to inject ELF checksum protect
 
-**./elftool -p ./input_elf ./out_elf**
+**./eit386 -p ./input_elf ./out_elf**
 
 ./input_elf is our executable that we want to protect.
 
@@ -23,17 +23,17 @@ exit the program.
 
 ## How it works
 
-elftool checks if there is padding in memory after PT_LOAD segment, if
+eit386 checks if there is padding in memory after PT_LOAD segment, if
 padding exists it simply injects our code after segment and changes the
 e_entry point to our code. For more details check Silvio Cesare algorithm
 for injecting code. http://vxheaven.org/lib/vsc02.html
 
 ## Injecting 32-bit ELF relocatable object to existing 32-bit ELF executable
 
-elftool have option that inserts existing 32-bit ELF relocatable object
+eit386 have option that inserts existing 32-bit ELF relocatable object
 to ELF executale.
 
-**.elftool -i ./object ./input_elf ./out_elf**
+**.eit386 -i ./object ./input_elf ./out_elf**
 
 ./object is our 32-bit ELF relocatable object
 
