@@ -5,6 +5,15 @@
 #include <inject.h>
 #include <common.h>
 
+extern unsigned int fchecksum;
+extern unsigned char *error_msg;
+extern unsigned int checksum_int;
+extern unsigned int checksum_pos1;
+extern unsigned int checksum_pos2;
+extern unsigned int file_buf;
+extern void e_entry();
+extern void protector();
+
 int checkELF(Elf32_Ehdr *ehdr)
 {
 	if (ehdr->e_ident[0] == 0x7F && ehdr->e_ident[1] == 'E' && ehdr->e_ident[2] == 'L' && ehdr->e_ident[3] == 'F')
@@ -318,14 +327,21 @@ void* getElf32RelProtectionObjectCode(void *buf, unsigned int fsize, unsigned in
     return code_buf;
 }
 
-unsigned char calcCheckSum(unsigned char *buf, unsigned int size, int chk_pos)
+unsigned int calcCheckSum(unsigned int *buf, unsigned int size, int chk_pos)
 {
-    unsigned char checksum = 0;
+    unsigned int checksum = 0;
     int i;
-    for(i=0;i<size;i++){
-        if (i == chk_pos)
+    int num = size / 4 + 1;
+    for(i=0;i<num;i++){
+        if (chk_pos / 4 == i)
             {
-                printf(":::%x\n",buf[i]);
+                //printf("%d:::%x\n",i,buf[i]);
+            continue;
+            }
+        
+        if ((chk_pos+4) % 4 != 0 && (chk_pos/4)==i-1)
+            {
+               // printf("%d:::%x\n",i,buf[i]);
             continue;
             }
         checksum ^= buf[i];
@@ -333,7 +349,7 @@ unsigned char calcCheckSum(unsigned char *buf, unsigned int size, int chk_pos)
     return checksum;
 }
 
-unsigned int injectElf32ProtectionObject(void *buf, unsigned int fsize, void *object_buf, unsigned int object_fsize)
+unsigned int injectElf32ProtectionObject(void *buf, unsigned int fsize)
 {
     void *tbuf;
 	int i,pidx,shidx;
@@ -348,23 +364,63 @@ unsigned int injectElf32ProtectionObject(void *buf, unsigned int fsize, void *ob
 
 	
 	unsigned int injection_object_size;
-    Elf32_Addr e_entry_sym = 0;
-	Elf32_Addr fchecksum = 0;
-	Elf32_Addr checksum_pos = 0;
-	
-	injection_object_size = getElf32RelObjectCodeSize(object_buf, object_fsize);
+    Elf32_Addr e_entry_sym = ((unsigned int)&e_entry - (unsigned int)&protector);
+	Elf32_Addr fchecksum_sym = ((unsigned int)&fchecksum - (unsigned int)&protector);
+	Elf32_Addr error_msg_sym = ((unsigned int)&error_msg - (unsigned int)&protector);
+	Elf32_Addr file_buf_sym = ((unsigned int)&file_buf - (unsigned int)&protector);
+    Elf32_Addr checksum_int_sym = ((unsigned int)&checksum_int - (unsigned int)&protector);
+    Elf32_Addr checksum_pos1_sym = ((unsigned int)&checksum_pos1 - (unsigned int)&protector);
+    Elf32_Addr checksum_pos2_sym = ((unsigned int)&checksum_pos2 - (unsigned int)&protector);
 
+     
+	injection_object_size = (unsigned int)(((unsigned int)&e_entry + 5) - (unsigned int)&protector);
 
-	
 	pidx = findPhdrForInjection(ehdr,phdr,injection_object_size);
 	if (pidx == -1)
 	   error("PT_LOAD segment doesn't have enough space for injection");
 
 
-    void* code = getElf32RelProtectionObjectCode(object_buf, object_fsize, &injection_object_size, phdr[pidx].p_vaddr+phdr[pidx].p_filesz, &e_entry_sym,&fchecksum,&checksum_pos);
+    void* code = malloc(injection_object_size);
+    memcpy(code,&protector,injection_object_size);
 
-	
-    printf("%x %x %x\n",e_entry_sym,fchecksum,checksum_pos);
+    for(i=0;i<injection_object_size-4;i++)
+    {
+        
+        if (*(unsigned int*)((unsigned int)code+i) == (unsigned int)&error_msg)
+        {
+            *(unsigned int*)((unsigned int)code+i) = (phdr[pidx].p_vaddr+phdr[pidx].p_filesz+error_msg_sym);
+        }
+        
+        if (*(unsigned int*)((unsigned int)code+i) == (unsigned int)&file_buf)
+        {
+
+            *(unsigned int*)((unsigned int)code+i) = (phdr[pidx].p_vaddr+phdr[pidx].p_filesz+file_buf_sym);
+        }
+        
+        if (*(unsigned int*)((unsigned int)code+i) == (unsigned int)&fchecksum)
+        {
+            *(unsigned int*)((unsigned int)code+i) = (phdr[pidx].p_vaddr+phdr[pidx].p_filesz+fchecksum_sym);
+        }
+        
+        if (*(unsigned int*)((unsigned int)code+i) == (unsigned int)&checksum_pos1)
+        {
+            *(unsigned int*)((unsigned int)code+i) = (phdr[pidx].p_vaddr+phdr[pidx].p_filesz+checksum_pos1_sym);
+        }
+        
+        if (*(unsigned int*)((unsigned int)code+i) == (unsigned int)&checksum_pos2)
+        {
+            *(unsigned int*)((unsigned int)code+i) = (phdr[pidx].p_vaddr+phdr[pidx].p_filesz+checksum_pos2_sym);
+        }
+        
+        
+        if (*(unsigned int*)((unsigned int)code+i) == (unsigned int)&checksum_int)
+        {
+            *(unsigned int*)((unsigned int)code+i) = (phdr[pidx].p_vaddr+phdr[pidx].p_filesz+checksum_int_sym);
+        }
+
+        
+    }
+    
     shidx = findShdr(ehdr,shdr,phdr[pidx].p_offset,phdr[pidx].p_filesz);
 	for(i=pidx+1;i<ehdr->e_phnum;i++)
 		phdr[i].p_offset+=phdr[pidx].p_align;
@@ -395,20 +451,27 @@ unsigned int injectElf32ProtectionObject(void *buf, unsigned int fsize, void *ob
 	phdr[pidx].p_memsz=phdr[pidx].p_filesz;
 	phdr[pidx].p_flags = (PF_X | PF_W | PF_R);
 
-		printf("checksum_pos1: %x\n", *(unsigned char*)(buf+phdr[pidx].p_offset+phdr[pidx].p_filesz+fchecksum-injection_object_size));
 
-    *(unsigned int*)(buf+phdr[pidx].p_offset+phdr[pidx].p_filesz+checksum_pos-injection_object_size) = (phdr[pidx].p_offset+phdr[pidx].p_filesz+fchecksum-injection_object_size);
-	printf("checksum_pos: %x\n", (phdr[pidx].p_offset+phdr[pidx].p_filesz+fchecksum-injection_object_size));
+    int pos = phdr[pidx].p_offset+phdr[pidx].p_filesz+fchecksum_sym-injection_object_size;
+    int pos1,pos2;
+    if (pos % 4 == 0)
+    {
+        pos1 = pos / 4;
+        pos2 = pos / 4;
+    }else
+    {
+        pos1 = pos / 4;
+        pos2 = pos / 4 + 1;
+    }
 
-	unsigned char checksum = calcCheckSum(buf,fsize,phdr[pidx].p_offset+phdr[pidx].p_filesz+fchecksum-injection_object_size);
-	
-    printf("checksum: %x\n",checksum);
-	
-    *(unsigned char*)(buf+phdr[pidx].p_offset+phdr[pidx].p_filesz+fchecksum-injection_object_size) =  (checksum); // checksum
-printf("checksum: %x\n", *(unsigned char*)(buf+phdr[pidx].p_offset+phdr[pidx].p_filesz+fchecksum-injection_object_size));
-	
-    
-    printf("checksum: %x\n", calcCheckSum(buf,fsize,phdr[pidx].p_offset+phdr[pidx].p_filesz+fchecksum-injection_object_size));
+    *(unsigned int*)(buf+phdr[pidx].p_offset+phdr[pidx].p_filesz+checksum_pos1_sym-injection_object_size) = pos1;
+    *(unsigned int*)(buf+phdr[pidx].p_offset+phdr[pidx].p_filesz+checksum_pos2_sym-injection_object_size) = pos2;
 
+	unsigned int checksum = calcCheckSum(buf,fsize,phdr[pidx].p_offset+phdr[pidx].p_filesz+fchecksum_sym-injection_object_size);
+	
+    printf("Calculated checksum: %x\n",checksum);
+	
+    *(unsigned int*)(buf+phdr[pidx].p_offset+phdr[pidx].p_filesz+fchecksum_sym-injection_object_size) =  (checksum); // checksum
+	
     return fsize;
 }

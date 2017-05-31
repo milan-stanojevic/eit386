@@ -3,9 +3,13 @@
 #include <string.h>
 #include <elf.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <limits.h>
 
 #include <inject.h>
 #include <common.h>
+
 
 /*
 Usage:
@@ -17,10 +21,10 @@ Inject object file to to ELF executable
 
 int main(int argc, char **argv)
 {
-    void *buf,*obuf;
+
+	void *buf,*obuf;
     unsigned int fsize=0;
     unsigned int ofsize=0;
-
 
     FILE *fp;
     if (argc < 2)
@@ -86,42 +90,22 @@ int main(int argc, char **argv)
         fseek(fp, 0L, SEEK_SET);
 
         buf = malloc(fsize+0x4000);
+        memset(buf,fsize+0x4000,0);
         fread(buf, fsize, 1, fp);
 
         fclose(fp);
-
-		char cmd[128];
-		char object_fname[128];
-		sprintf(object_fname, "%s_object.S",argv[2]);
-		sprintf(cmd, "cp object.S %s", object_fname);
-		system(cmd);
-		sprintf(cmd,"sed -i -e 's/TEMPLATE_FNAME/%s/g' %s;", argv[3], object_fname);
-		system(cmd);
-		sprintf(cmd,"gcc -m32 -c %s",object_fname);
-		system(cmd);
-		sprintf(object_fname,"%s_object.o",argv[2]);
-		fp = fopen(object_fname, "rb");
-        if (fp == NULL)
-            error("File not exists");
-
-        fseek(fp, 0L, SEEK_END);
-        ofsize = ftell(fp);
-        fseek(fp, 0L, SEEK_SET);
-
-        obuf = malloc(ofsize);
-        fread(obuf, ofsize, 1, fp);
-
-        fclose(fp);
 		
-        fsize = injectElf32ProtectionObject(buf, fsize, obuf, ofsize);
+        fsize = injectElf32ProtectionObject(buf, fsize);
 		
 
         fp = fopen(argv[3], "wb");
         if (fp == NULL)
             error("Can not create output file");
-        fwrite(buf, fsize, 1, fp);
+        
+		fwrite(buf, fsize, 1, fp);
         fclose(fp);
-	chmod(argv[3], 0x1FD);
+		
+		chmod(argv[3], 0x1FD);
 
         return 0;
 

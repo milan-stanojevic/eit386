@@ -1,4 +1,4 @@
-# eit386
+# eit386 v2.0
 eit386 is tool for injecting code to existing 32-bit ELF executable, 
 it have option for injecting checksum protect code and option for
 injecting existing 32-bit ELF relocatable object to our ELF.
