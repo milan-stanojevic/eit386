@@ -152,11 +152,13 @@ void* getElf32RelObjectCode(void *buf, unsigned int fsize, unsigned int *code_si
         error("Not an ELF file - it has the wrong magic bytes at the start");
 	
     if (ehdr->e_machine != EM_386)
-            error("Not an ELF 386 Object");
+            error("Not an ELF 386 Relocatable file");
 
     if (ehdr->e_type != ET_REL)
             error("Not an ELF Relocatable file");
 
+    if (ehdr->e_ident[EI_OSABI] != ELFOSABI_LINUX && ehdr->e_ident[EI_OSABI] != ELFOSABI_NONE)
+            error("Not an ELF LINUX Relocatable file");
     
 	Elf32_Shdr *shdr = (Elf32_Shdr*)(buf+ehdr->e_shoff);
     
@@ -224,6 +226,9 @@ unsigned int injectElf32Object(void *buf, unsigned int fsize, void *object_buf, 
 
     if (ehdr->e_type != ET_EXEC)
             error("Not an ELF Executable");
+    
+    if (ehdr->e_ident[EI_OSABI] != ELFOSABI_LINUX && ehdr->e_ident[EI_OSABI] != ELFOSABI_NONE)
+            error("Not an ELF LINUX Executable");
     
 	Elf32_Phdr *phdr = (Elf32_Phdr*)(buf+ehdr->e_phoff);
 	Elf32_Shdr *shdr = (Elf32_Shdr*)(buf+ehdr->e_shoff);
@@ -313,6 +318,9 @@ unsigned int injectElf32ProtectionObject(void *buf, unsigned int fsize)
 
     if (ehdr->e_type != ET_EXEC)
             error("Not an ELF Executable");
+
+    if (ehdr->e_ident[EI_OSABI] != ELFOSABI_LINUX && ehdr->e_ident[EI_OSABI] != ELFOSABI_NONE)
+            error("Not an ELF LINUX Executable");
 
     
 	Elf32_Phdr *phdr = (Elf32_Phdr*)(buf+ehdr->e_phoff);
