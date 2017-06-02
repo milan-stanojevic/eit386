@@ -22,6 +22,8 @@ int checkELF(Elf32_Ehdr *ehdr)
 		return 0;
 }
 
+
+
 int checkPhdrOverlap(Elf32_Ehdr *ehdr, Elf32_Phdr *phdr, unsigned int pos, unsigned int sz)
 {
 	int i;
@@ -149,6 +151,13 @@ void* getElf32RelObjectCode(void *buf, unsigned int fsize, unsigned int *code_si
 	if (checkELF(ehdr) == 0)
         error("Not an ELF file - it has the wrong magic bytes at the start");
 	
+    if (ehdr->e_machine != EM_386)
+            error("Not an ELF 386 Object");
+
+    if (ehdr->e_type != ET_REL)
+            error("Not an ELF Relocatable file");
+
+    
 	Elf32_Shdr *shdr = (Elf32_Shdr*)(buf+ehdr->e_shoff);
     
     void *shstr_section = (void*)(buf+ shdr[ehdr->e_shstrndx].sh_offset);
@@ -210,6 +219,12 @@ unsigned int injectElf32Object(void *buf, unsigned int fsize, void *object_buf, 
 	if (checkELF(ehdr) == 0)
         error("Not an ELF file - it has the wrong magic bytes at the start");
 	
+    if (ehdr->e_machine != EM_386)
+            error("Not an ELF 386 Executable");
+
+    if (ehdr->e_type != ET_EXEC)
+            error("Not an ELF Executable");
+    
 	Elf32_Phdr *phdr = (Elf32_Phdr*)(buf+ehdr->e_phoff);
 	Elf32_Shdr *shdr = (Elf32_Shdr*)(buf+ehdr->e_shoff);
 
@@ -261,72 +276,6 @@ unsigned int injectElf32Object(void *buf, unsigned int fsize, void *object_buf, 
 }
 
 
-
-
-
-
-void* getElf32RelProtectionObjectCode(void *buf, unsigned int fsize, unsigned int *code_size, Elf32_Addr e_entry, Elf32_Addr *e_entry_sym, Elf32_Addr *fchecksum, Elf32_Addr *checksum_pos)
-{
-	int i,ridx = -1;
-    int tidx = -1;
-    Elf32_Ehdr *ehdr = (Elf32_Ehdr*)buf;
-
-	if (checkELF(ehdr) == 0)
-        error("Not an ELF file - it has the wrong magic bytes at the start");
-	
-	Elf32_Shdr *shdr = (Elf32_Shdr*)(buf+ehdr->e_shoff);
-    
-    void *shstr_section = (void*)(buf+ shdr[ehdr->e_shstrndx].sh_offset);
-    
-    for(i=0;i<ehdr->e_shnum;i++)
-    {
-        if (shdr[i].sh_type == SHT_REL)
-        {
-            char *sh_name = (char*)(shstr_section+shdr[i].sh_name);
-            if (strcmp(sh_name,".rel.text") == 0)
-                ridx = i;
-        }else if (shdr[i].sh_type == SHT_PROGBITS)
-        {
-            char *sh_name = (char*)(shstr_section+shdr[i].sh_name);
-            if (strcmp(sh_name,".text") == 0)
-                tidx = i;
-        }
-    }
-    
-    if (ridx == -1 || tidx == -1)
-        return NULL;
-    
-    *(code_size) = shdr[tidx].sh_size;
-    
-    printf("[%d] .text section starting at: 0x%x\n\n", tidx, shdr[tidx].sh_offset);
-        
-    Elf32_Rel *rel = (Elf32_Rel*)(buf+shdr[ridx].sh_offset);
-    for(i=0;i<shdr[ridx].sh_size/sizeof(Elf32_Rel);i++)
-    {
-        //printf("0x%x  %d\n",rel[i].r_offset,ELF32_R_TYPE(rel[i].r_info));
-        if (ELF32_R_TYPE(rel[i].r_info) == R_386_32)
-        {
-            printf("[%d] R_386_32 relocation at: 0x%x\n", i, rel[i].r_offset);
-            *(Elf32_Word*)(buf+shdr[tidx].sh_offset+rel[i].r_offset) += e_entry;
-        }
-    }
-    
-    if (getElf32SymbolAddr(buf,"e_entry") == -1)
-        printf("Warning: e_entry symbol not found in object file!\n");
-    else
-        printf("\n[e_entry] symbol at: 0x%x\n",getElf32SymbolAddr(buf,"e_entry"));
-    
-    *(unsigned char*)(buf+shdr[tidx].sh_offset+getElf32SymbolAddr(buf,"e_entry")) = 0xe9; // jmp opcode
-        
-    *(e_entry_sym) = getElf32SymbolAddr(buf,"e_entry");
-	*(fchecksum) = getElf32SymbolAddr(buf,"fchecksum");
-    *(checksum_pos) = getElf32SymbolAddr(buf,"checksum_pos");
-
-    void *code_buf = malloc(shdr[tidx].sh_size);
-    memcpy(code_buf, buf+shdr[tidx].sh_offset, shdr[tidx].sh_size);
-    return code_buf;
-}
-
 unsigned int calcCheckSum(unsigned int *buf, unsigned int size, int chk_pos)
 {
     unsigned int checksum = 0;
@@ -359,6 +308,13 @@ unsigned int injectElf32ProtectionObject(void *buf, unsigned int fsize)
 	if (checkELF(ehdr) == 0)
         error("Not an ELF file - it has the wrong magic bytes at the start");
 	
+    if (ehdr->e_machine != EM_386)
+            error("Not an ELF 386 Executable");
+
+    if (ehdr->e_type != ET_EXEC)
+            error("Not an ELF Executable");
+
+    
 	Elf32_Phdr *phdr = (Elf32_Phdr*)(buf+ehdr->e_phoff);
 	Elf32_Shdr *shdr = (Elf32_Shdr*)(buf+ehdr->e_shoff);
 
