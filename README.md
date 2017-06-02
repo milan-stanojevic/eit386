@@ -1,11 +1,11 @@
-# eit386 v2.0
+# eit386 v2.1
 eit386 is tool for injecting code to existing 32-bit ELF executable, 
 it have option for injecting checksum protect code and option for
 injecting existing 32-bit ELF relocatable object to our ELF.
 
 ## 32-bit ELF checksum protect
 
-Given a 32-bit ELF executable file, elftool inserts into it a
+Given a 32-bit ELF executable file, eit386 inserts into it a
 snippet of checksum check code. Every time when you run your executable,
 checksum check code will be executed and it will check checksum of 
 executable if checksum is valid, executable will execute it's own
